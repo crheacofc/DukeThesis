@@ -48,6 +48,7 @@ def Setup(Sim_name,MooseFileDir,LammpsFileDir,ParticlesFile,Porosity_Filecpp,Mes
 def runSim(Sim_name,MooseFileDir,LammpsFileDir,Porosity_Filecpp,PorosityFileMOOSE,Mesh,MooseFile,LammpsFile,ParticlesFile,In_Press,Num_times,Num_parts,Diameter,Poros,Mui,Mud,Domain,Ann_rad,Dom_rad,NN,Init=True):
     os.chdir("/home/crhea/Dropbox/Thesis/PrimaryFiles/"+Sim_name+"/")
     #Calculate element and node numbers for finite element mesh
+    print(Mesh)
     num_nodes,num_elem = count_FEMesh(Mesh);
     print(Sim_name)
     lmp = lammps()
@@ -117,7 +118,7 @@ def runSim(Sim_name,MooseFileDir,LammpsFileDir,Porosity_Filecpp,PorosityFileMOOS
 
 
 def main():
-    viscosities = [10.0,100.0,250.0,500.0,1000.0]
+    viscosities = [250.0,500.0,1000.0]
     for i in range(len(viscosities)):
         Name_of_Simu = Name_of_Sim+"_"+str(viscosities[i])
         Setup(Name_of_Simu,MOOSEFILEDIR,LAMMPSFILEDIR,ParticlesInput,PorosityFilecpp,mesh,viscosities[i])
