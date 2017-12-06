@@ -265,7 +265,14 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
 
     //cout<<x_mesh_res[0]<<" "<<x_mesh[21]<<endl;
     // Populate cells with nodes and particles
-    int in_count=0;
+    int in_count = 0;
+    int in1 = 0;
+    int in2 = 0;
+  #pragma omp sections
+  {
+    #pragma omp section
+    {
+    //int in_count=0;
     for (int i=0;i<*pmesh;i++){ //all mesh
         for (int j=0;j<grid_size_mesh-1;j++){ // x positions of grid
             for (int k=0;k<grid_size_mesh-1;k++){ // y positions of grid
@@ -273,14 +280,16 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
 
                 if (((x_mesh[i]>=x_grid_mesh[j])&&(x_mesh[i]<x_grid_mesh[j+1]))&&((y_mesh[i]>=y_grid_mesh[k])&&(y_mesh[i]<y_grid_mesh[k+1]))){ //push back index
                     cells[j][k].mesh_ind.push_back(i); //ex) i=1,j=2 ==> cell (22) look at diagram. That is also second row and third column
-                    in_count++;
-                }
+                    in1++;
+                }//end if
 
-            }
-        }
-    }
-    //cout<<"Done with populating cells with nodes"<<endl;
-    //cout<<in_count<<endl;
+          }//end k
+        }//end j
+    }//end i
+  }//end section
+    #pragma omp section
+    {
+      //in2 = 0;
     for (int i=0;i<*pnparticles;i++){ //all particles
         for (int j=0;j<grid_size_mesh-1;j++){ // x positions of grid
             for (int k=0;k<grid_size_mesh-1;k++){ // y positions of grid
@@ -288,12 +297,14 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
                 if (((x_pos[i]>x_grid_mesh[j])&&(x_pos[i]<=x_grid_mesh[j+1]))&&((y_pos[i]>y_grid_mesh[k])&&(y_pos[i]<=y_grid_mesh[k+1]))){ //push back index
                     cells[j][k].indices.push_back(i); //ex) i=1,j=2 ==> cell (22) look at diagram. That is also second row and third column
                     //cout << "IN!"<<endl;
-                    in_count++;
-                }
-            }
-        }
-    }
-
+                    in2++;
+                }//end if
+            }//end k
+        }//end j
+    }//end i
+  }//end section
+}//end sections
+  in_count = in1+in2;
     vector<int> ind;
     map<int, vector<int>> NN_part;
     map<int,int> Cell_part; //Map between particle and cell number
@@ -303,8 +314,11 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
     vector<int> part_ind;
     map <int, vector<int>> NN_mesh;
     map <int,int> Cell_mesh;
+    #pragma omp parallel
+    {
     int mesh_nodes_number = 0;
-
+    int number_in = 0;
+    #pragma omp for private(part_ind) schedule(dynamic,10)
     for (int i=0;i<grid_size_mesh-1;i++){
         for(int j=0; j<grid_size_mesh-1;j++){
             if (cells[i][j].mesh_ind.size() >0){
@@ -322,6 +336,7 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
                                     for (int part_in_cell=0;part_in_cell<cells[i+m][j+n].indices.size();part_in_cell++){
                                         int particle = cells[i+m][j+n].indices[part_in_cell];
                                         part_ind.push_back(particle);
+                                        number_in++;
                                     }
                                 }
                                 else{
@@ -362,7 +377,7 @@ tuple<map<int,vector<int>>,map<int,vector<int>>,map<int,int>,map<int,int>> Neare
 
         }//end of j
     }//end of i and nearest neighbor search
-
+  }//end parallel
 
 
     return make_tuple(NN_part,NN_mesh,Cell_part,Cell_mesh);
@@ -388,7 +403,9 @@ void node::Packing_Fraction_Calculation(double domain_radius, double annulus_rad
     double A_annulus = 0.0;
     A_annulus = ann_area_calc(annulus_x,annulus_y,annulus_radius, domain_radius);
     //Now to calculate our different areas.
-    for (int i=0;i<dist.size();i++){
+    int i;
+    #pragma omp for private(i)
+    for (i=0;i<dist.size();i++){
         //if (distances(x_pos[i],y_pos[i],0.0,0.0)>domain_radius){//particle not totally in domain
         //    cout<<"particle not in annulus"<<endl;
         //    A_total += 0.0; //for now set to zero. Soon we need to do 3 circle intersection!
@@ -641,7 +658,7 @@ string output_path = "/home/crhea/Documents/DukeThesis/";
 string mesh_to_read = "/home/crhea/Documents/DukeThesis/Mesh/Central_Square_nodes";
 string mesh_connectivity = "/home/crhea/Documents/DukeThesis/Mesh/Central_Square_connectivity";
 string file_name = "lammps_pos_out_simple";
-string outputname = "porosity_standard";
+string outputname = "porosity_openmp";
 double domain_radius = 1.8;
 double annulus_radius = 0.02;
 int nparticles = 9960;
